@@ -1,24 +1,52 @@
 /*
-Краткая информация о базе данных "Компьютерная фирма":
+Задание: 1 ($erges: 2008-06-21)
+Дима и Миша пользуются продуктами от одного и того же производителя.
+Тип Таниного принтера не такой, как у Вити, но признак "цветной или нет" - совпадает.
+Размер экрана Диминого ноутбука на 3 дюйма больше Олиного.
+Мишин ПК в 4 раза дороже Таниного принтера.
+Номера моделей Витиного принтера и Олиного ноутбука отличаются только третьим символом.
 
-Схема БД состоит из четырех таблиц:
-    Product(maker, model, type)
-    PC(code, model, speed, ram, hd, cd, price)
-    Laptop(code, model, speed, ram, hd, price, screen)
-    Printer(code, model, color, type, price)
+У Костиного ПК скорость процессора, как у Мишиного ПК; объем жесткого диска, как у Диминого ноутбука;
+объем памяти, как у Олиного ноутбука, а цена - как у Витиного принтера.
+Вывести все возможные номера моделей Костиного ПК.
 
-Таблица Product представляет производителя (maker), номер модели (model)
-и тип ('PC' - ПК, 'Laptop' - ПК-блокнот или 'Printer' - принтер).
+8 Зависимостей:
+    4 исконные зависимости:
+        KostyaPC.speed = MishaPC.speed
+        KostyaPC.hd = DimaLaptop.hd
+        KostyaPC.ram = OlyaLaptop.ram
+        KostyaPC.price = VityaPrinter.price
 
-Предполагается, что номера моделей в таблице Product уникальны для всех производителей и типов продуктов.
-В таблице PC для каждого ПК, однозначно определяемого уникальным кодом – code,
-    указаны модель – model (внешний ключ к таблице Product),
-    скорость - speed (процессора в мегагерцах),
-    объем памяти - ram (в мегабайтах), размер диска - hd (в гигабайтах),
-    скорость считывающего устройства - cd (например, '4x') и цена - price (в долларах).
+    4 случайных:
+        1) DimaProduct.maker = MishaProduct.maker
 
-Таблица Laptop аналогична таблице РС за исключением того, что вместо скорости CD содержит размер экрана -screen (в дюймах).
+        2) TanyaPrinter.type != VityaPrinter.type
+            TanyaPrinter.color = VityaPrinter.color
 
-В таблице Printer для каждой модели принтера указывается, является ли он цветным
-    - color ('y', если цветной),
-     тип принтера - type (лазерный – 'Laser', струйный – 'Jet' или матричный – 'Matrix') и цена - price. */
+        3) Номера моделей Витиного принтера и Олиного ноутбука отличаются только третьим символом.
+
+        4) DimaLaptop.screen - OlyaLaptop.screen = 3
+
+        5) MishaPC.price = 4 * TanyaPrinter.price
+
+
+Решение 1, все исконные условия и 2 случайное в JOIN, всё остальное в WHERE
+*/
+SELECT DISTINCT PC.model
+FROM PC
+         INNER JOIN PC MishaPC ON PC.speed = MishaPC.speed
+         INNER JOIN Laptop DimaLaptop ON PC.hd = DimaLaptop.hd
+         INNER JOIN Laptop OlyaLaptop ON PC.ram = OlyaLaptop.ram
+         INNER JOIN Printer VityaPrinter ON PC.price = VityaPrinter.price
+         INNER JOIN Printer TanyaPrinter
+                    ON (VityaPrinter.type <> TanyaPrinter.type AND VityaPrinter.color = TanyaPrinter.color)
+
+WHERE (SELECT maker
+       FROM Product DimaProduct
+       WHERE DimaProduct.model = DimaLaptop.model) IN
+      (SELECT maker FROM Product MishaProduct WHERE MishaPC.model = MishaProduct.model)
+  AND DimaLaptop.screen = OlyaLaptop.screen + 3
+  AND stuff(OlyaLaptop.model, 3, 1, '') = stuff(VityaPrinter.model, 3, 1, '')
+  AND MishaPC.price = 4 * TanyaPrinter.price
+
+
